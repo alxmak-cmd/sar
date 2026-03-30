@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAR — Sequential Architecture Reasoning</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:             #0d0f18;
+      --surface:        #13162a;
+      --surface-raised: #1a1e35;
+      --border:         #252a45;
+      --border-focus:   #4f6ef7;
+      --text:           #dde1f0;
+      --text-muted:     #6b7194;
+      --text-faint:     #3d4266;
+      --accent:         #4f6ef7;
+      --accent-dim:     rgba(79, 110, 247, 0.12);
+      --success:        #34d399;
+      --success-dim:    rgba(52, 211, 153, 0.12);
+      --warning:        #fbbf24;
+      --warning-dim:    rgba(251, 191, 36, 0.14);
+      --error:          #f87171;
+      --error-dim:      rgba(248, 113, 113, 0.12);
+      --radius:         10px;
+      --radius-sm:      6px;
+      --transition:     180ms ease;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 48px 20px 80px;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .header-wordmark {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .header h1 {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── Input section ── */
+    .input-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .problem-textarea {
+      width: 100%;
+      min-height: 100px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 12px 14px;
+      resize: vertical;
+      transition: border-color var(--transition);
+      outline: none;
+    }
+
+    .problem-textarea:focus {
+      border-color: var(--border-focus);
+    }
+
+    .problem-textarea::placeholder {
+      color: var(--text-faint);
+    }
+
+    .input-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+
+    .run-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 22px;
+      cursor: pointer;
+      transition: opacity var(--transition), transform var(--transition);
+    }
+
+    .run-btn:hover:not(:disabled) {
+      opacity: 0.88;
+      transform: translateY(-1px);
+    }
+
+    .run-btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .run-btn-arrow {
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    /* ── Section headings ── */
+    .section-heading {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── Step cards ── */
+    .steps-section {
+      margin-bottom: 32px;
+    }
+
+    .step-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .step-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      transition: border-color var(--transition), background var(--transition);
+    }
+
+    .step-card.active {
+      border-left-color: var(--accent);
+      background: var(--surface-raised);
+    }
+
+    .step-card.done {
+      border-left-color: var(--success);
+    }
+
+    .step-icon {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+
+    .step-card.active .step-dot,
+    .step-card.done .step-dot {
+      display: none;
+    }
+
+    .checkmark {
+      font-size: 16px;
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .step-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .step-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.02em;
+    }
+
+    .step-card.pending .step-name {
+      color: var(--text-muted);
+    }
+
+    .step-summary {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .step-number {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-faint);
+    }
+
+    /* ── Result panel ── */
+    .result-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-option-name {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .confidence-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .badge-high {
+      background: var(--success-dim);
+      color: var(--success);
+    }
+
+    .badge-medium {
+      background: var(--warning-dim);
+      color: var(--warning);
+    }
+
+    .badge-low {
+      background: var(--error-dim);
+      color: var(--error);
+    }
+
+    .result-stats {
+      display: flex;
+      gap: 24px;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-raised);
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .result-body {
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .result-section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .justification-text {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .tradeoffs-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .tradeoffs-list li {
+      display: flex;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .tradeoffs-list li::before {
+      content: '↗';
+      color: var(--warning);
+      flex-shrink: 0;
+      font-size: 13px;
+      margin-top: 1px;
+    }
+
+    /* ── Error panel ── */
+    .error-panel {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: var(--error-dim);
+      border: 1px solid rgba(248, 113, 113, 0.25);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 32px;
+    }
+
+    .error-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+      line-height: 1.5;
+    }
+
+    .error-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--error);
+      margin-bottom: 4px;
+    }
+
+    .error-message {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Utility ── */
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-wordmark">Sequential Architecture Reasoning</div>
+      <h1>SAR</h1>
+      <p>Forces structured thinking through five reasoning steps before committing to a system design — preventing snap judgments on complex architecture decisions.</p>
+    </header>
+
+    <!-- Input -->
+    <section class="input-section">
+      <label class="input-label" for="problem">Problem Statement</label>
+      <textarea
+        id="problem"
+        class="problem-textarea"
+        placeholder="Describe the system you need to design…"
+      >Design a real-time collaborative document editing system supporting 10,000 concurrent users, offline mode, conflict resolution, and end-to-end encryption.</textarea>
+      <div class="input-footer">
+        <button id="run-btn" class="run-btn">
+          Run Analysis <span class="run-btn-arrow">→</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Step cards -->
+    <section id="steps-section" class="steps-section hidden">
+      <div class="section-heading">Reasoning Chain</div>
+      <div class="step-cards" id="step-cards">
+        <!-- Injected by JS -->
+      </div>
+    </section>
+
+    <!-- Result panel -->
+    <section id="result-panel" class="result-panel hidden">
+      <div class="result-header">
+        <div id="res-option-name" class="result-option-name"></div>
+        <span id="res-confidence" class="confidence-badge"></span>
+      </div>
+      <div class="result-stats">
+        <div class="stat">
+          <span id="res-tradeoffs-count" class="stat-value"></span>
+          <span class="stat-label">Tradeoffs</span>
+        </div>
+        <div class="stat">
+          <span id="res-risks-count" class="stat-value"></span>
+          <span class="stat-label">Risks</span>
+        </div>
+        <div class="stat">
+          <span id="res-failures-count" class="stat-value"></span>
+          <span class="stat-label">Failure Modes</span>
+        </div>
+      </div>
+      <div class="result-body">
+        <div>
+          <div class="result-section-label">Justification</div>
+          <p id="res-justification" class="justification-text"></p>
+        </div>
+        <div>
+          <div class="result-section-label">Accepted Tradeoffs</div>
+          <ul id="res-tradeoffs-list" class="tradeoffs-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error panel -->
+    <div id="error-panel" class="error-panel hidden">
+      <div class="error-icon">⚠</div>
+      <div>
+        <div class="error-title">Analysis failed</div>
+        <div id="error-message" class="error-message"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const STEPS = [
+      'DEFINE_PROBLEM',
+      'GENERATE_OPTIONS',
+      'EVALUATE_OPTIONS',
+      'CRITIQUE_DESIGN',
+      'FINALIZE_ARCHITECTURE',
+    ];
+
+    const STEP_LABELS = {
+      DEFINE_PROBLEM:        'Define Problem',
+      GENERATE_OPTIONS:      'Generate Options',
+      EVALUATE_OPTIONS:      'Evaluate Options',
+      CRITIQUE_DESIGN:       'Critique Design',
+      FINALIZE_ARCHITECTURE: 'Finalize Architecture',
+    };
+
+    // ── Build step cards ──────────────────────────────────────────────
+
+    function buildStepCards() {
+      const container = document.getElementById('step-cards');
+      container.innerHTML = '';
+      STEPS.forEach((name, i) => {
+        const card = document.createElement('div');
+        card.className = 'step-card pending';
+        card.id = `step-${name}`;
+        card.innerHTML = `
+          <div class="step-icon">
+            <div class="step-dot"></div>
+          </div>
+          <div class="step-body">
+            <div class="step-name">${STEP_LABELS[name]}</div>
+            <div class="step-summary"></div>
+          </div>
+          <div class="step-number">${i + 1} / ${STEPS.length}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // ── Step summary lines ────────────────────────────────────────────
+
+    function getStepSummary(stepName, result) {
+      switch (stepName) {
+        case 'DEFINE_PROBLEM':
+          return `${result.requirements.length} requirements · ${result.constraints.length} constraints · ${result.assumptions.length} assumptions`;
+        case 'GENERATE_OPTIONS':
+          return result.options.map(o => o.name).join(' · ');
+        case 'EVALUATE_OPTIONS': {
+          const top = result.evaluations.reduce((a, b) => {
+            const sa = a.scalability + a.cost + a.complexity + a.latency + a.reliability;
+            const sb = b.scalability + b.cost + b.complexity + b.latency + b.reliability;
+            return sa >= sb ? a : b;
+          });
+          const score = top.scalability + top.cost + top.complexity + top.latency + top.reliability;
+          return `Top scorer: ${top.option} — ${score}/25`;
+        }
+        case 'CRITIQUE_DESIGN':
+          return `${result.risks.length} risks · ${result.failure_modes.length} failure modes · ${result.edge_cases.length} edge cases`;
+        case 'FINALIZE_ARCHITECTURE':
+          return `Selected: ${result.selected_option}`;
+      }
+    }
+
+    // ── Step card state ───────────────────────────────────────────────
+
+    function setStepStatus(stepName, status, result = null) {
+      const card = document.getElementById(`step-${stepName}`);
+      const icon = card.querySelector('.step-icon');
+      const summary = card.querySelector('.step-summary');
+
+      card.classList.remove('pending', 'active', 'done');
+      card.classList.add(status);
+
+      if (status === 'active') {
+        icon.innerHTML = '<div class="spinner"></div>';
+        summary.textContent = 'Processing…';
+      } else if (status === 'done') {
+        icon.innerHTML = '<span class="checkmark">✓</span>';
+        summary.textContent = getStepSummary(stepName, result);
+      } else {
+        icon.innerHTML = '<div class="step-dot"></div>';
+        summary.textContent = '';
+      }
+    }
+
+    // ── Result panel ──────────────────────────────────────────────────
+
+    function renderResult(summary, state) {
+      const fin = state.finalize_architecture;
+
+      document.getElementById('res-option-name').textContent = fin.selected_option;
+
+      const badge = document.getElementById('res-confidence');
+      badge.textContent = summary.confidence.toUpperCase();
+      badge.className = `confidence-badge badge-${summary.confidence}`;
+
+      document.getElementById('res-tradeoffs-count').textContent = fin.tradeoffs.length;
+      document.getElementById('res-risks-count').textContent = state.critique_design.risks.length;
+      document.getElementById('res-failures-count').textContent = state.critique_design.failure_modes.length;
+
+      document.getElementById('res-justification').textContent = fin.justification;
+
+      const list = document.getElementById('res-tradeoffs-list');
+      list.innerHTML = '';
+      fin.tradeoffs.forEach(t => {
+        const li = document.createElement('li');
+        li.textContent = t;
+        list.appendChild(li);
+      });
+
+      const panel = document.getElementById('result-panel');
+      panel.classList.remove('hidden');
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Error state ───────────────────────────────────────────────────
+
+    function showError(message) {
+      document.getElementById('error-message').textContent = message;
+      document.getElementById('error-panel').classList.remove('hidden');
+    }
+
+    // ── SSE stream via fetch ──────────────────────────────────────────
+
+    async function runAnalysis() {
+      const problem = document.getElementById('problem').value.trim();
+      if (!problem) return;
+
+      // Reset UI
+      buildStepCards();
+      document.getElementById('run-btn').disabled = true;
+      document.getElementById('result-panel').classList.add('hidden');
+      document.getElementById('error-panel').classList.add('hidden');
+      document.getElementById('steps-section').classList.remove('hidden');
+      setStepStatus(STEPS[0], 'active');
+
+      let currentStepIndex = 0;
+
+      try {
+        const response = await fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ problem }),
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`Server error ${response.status}: ${text}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Split on double-newline (SSE event boundary), keep trailing incomplete chunk
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop();
+
+          for (const chunk of parts) {
+            if (!chunk.trim()) continue;
+
+            let eventType = 'message';
+            let dataLine = '';
+
+            for (const line of chunk.split('\n')) {
+              if (line.startsWith('event: '))      eventType = line.slice(7).trim();
+              else if (line.startsWith('data: '))  dataLine  = line.slice(6).trim();
+            }
+
+            if (!dataLine) continue;
+            const payload = JSON.parse(dataLine);
+
+            if (eventType === 'step') {
+              setStepStatus(payload.step, 'done', payload.result);
+              currentStepIndex++;
+              if (currentStepIndex < STEPS.length) {
+                setStepStatus(STEPS[currentStepIndex], 'active');
+              }
+            } else if (eventType === 'complete') {
+              renderResult(payload.summary, payload.state);
+            } else if (eventType === 'error') {
+              showError(payload.message);
+            }
+          }
+        }
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        document.getElementById('run-btn').disabled = false;
+      }
+    }
+
+    document.getElementById('run-btn').addEventListener('click', runAnalysis);
+  </script>
+</body>
+</html>
